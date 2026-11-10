@@ -1,0 +1,79 @@
+name: delfos
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: delfos
+      POSTGRES_USER: delfos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U delfos -d delfos"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+    mem_limit: 768m
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 35s
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://delfos:${POSTGRES_PASSWORD}@postgres:5432/delfos
+      POLYGON_RPC_URL: ${POLYGON_RPC_URL:-https://polygon-bor-rpc.publicnode.com}
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8080}
+      CLOB_API_URL: ${CLOB_API_URL:-https://clob.polymarket.com}
+      GAMMA_API_URL: ${GAMMA_API_URL:-https://gamma-api.polymarket.com}
+      DATA_API_URL: ${DATA_API_URL:-https://data-api.polymarket.com}
+      CONFIRMATIONS: ${CONFIRMATIONS:-20}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-4000}
+      BLOCK_BATCH_SIZE: ${BLOCK_BATCH_SIZE:-30}
+      INITIAL_LOOKBACK_BLOCKS: ${INITIAL_LOOKBACK_BLOCKS:-300}
+      START_BLOCK: ${START_BLOCK:-}
+      WHALE_USD: ${WHALE_USD:-10000}
+      INSIDER_USD: ${INSIDER_USD:-10000}
+      DELFOS_LOG_FORMAT: ${DELFOS_LOG_FORMAT:-text}
+      IPV4_ONLY: ${IPV4_ONLY:-true}
+      EXCHANGE_ADDRESSES: ${EXCHANGE_ADDRESSES:-0xe111180000d2663c0091e4f400237545b87b996b,0xe2222d279d744050d28e00520010520000310f59,0xe3333700ca9d93003f00f0f71f8515005f6c00aa}
+    networks: [database, web]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    mem_limit: 512m
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-0.0.0.0}:${HTTP_PORT:-8080}:8080"
+    networks: [web]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+    mem_limit: 128m
+networks:
+  database:
+    internal: true
+  web:
+volumes:
+  postgres_data:

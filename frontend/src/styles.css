@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body { @apply m-0 bg-ink text-stone-200 antialiased; }
+  button, input, select { @apply outline-none; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { @apply ring-2 ring-sage ring-offset-2 ring-offset-ink; }
+  button:disabled { @apply cursor-not-allowed opacity-40; }
+  ::selection { background: #b4c5a4; color: #101211; }
+}
+@layer components {
+  .eyebrow { @apply font-mono text-[10px] uppercase tracking-[0.16em] text-muted; }
+  .quiet-button { @apply inline-flex items-center justify-center gap-2 rounded border border-line px-3 py-2 text-xs text-stone-300 transition-colors hover:border-stone-500 hover:bg-white/5; }
+  .metric { @apply border-r border-line px-6 py-6 last:border-r-0; }
+}
+html { color-scheme: dark; }
+th { font-weight: 400; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
